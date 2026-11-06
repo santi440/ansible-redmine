@@ -274,3 +274,6 @@ infraestructura se gestiona con OpenTofu, el acceso a la base queda restringido
 por Security Groups, las credenciales no se versionan y el flujo de despliegue,
 verificación y destrucción queda documentado como comandos reproducibles. La
 entrega está lista para demostrarse con la URL de la Elastic IP.
+
+El código es verificable y probable, se encuentra disponible en el siguiente repositorio (se utilizó el mismo para Parte 1 y parte 2, ver commit correspondiente): 
+https://github.com/santi440/ansible-redmine

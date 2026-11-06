@@ -173,12 +173,6 @@ make lab-secret          # genera una contraseña local fuera de Git
 vagrant up --provision
 ```
 
-Si los puertos por defecto están ocupados por otra VM:
-
-```bash
-REDMINE_SSH_PORT=2223 REDMINE_HTTP_PORT=8081 vagrant up --provision
-```
-
 El inventario local (`inventory/hosts.yml`) usa `ansible_connection: local`, por
 lo que el playbook se ejecuta dentro de la VM. La contraseña de la base se toma
 de `vault_redmine_db_password`, con `make lab-secret` para el laboratorio o
@@ -238,9 +232,6 @@ alternativos y el manejo de colecciones en Molecule. También se amplió
 `.gitignore` para evitar que vuelvan al repositorio los artefactos generados y
 los secretos locales.
 
-En el rol `redmine` se agregó `notify: Reiniciar Redmine` a las plantillas de
-`database.yml`, `puma.rb` y `Gemfile.local`, para que un cambio de host/puerto de
-base o de workers se aplique efectivamente en el servicio.
 
 ## 8. Conclusión
 
@@ -249,3 +240,6 @@ La instalación cumple todos los puntos pedidos: Redmine 7.0.3 sobre Ubuntu
 los estáticos servidos por Nginx, PostgreSQL 16 local y persistencia tras el
 reinicio. El flujo es idempotente, está verificado dentro de la VM y queda
 automatizado con roles, playbooks, Molecule y linters.
+
+El código es verificable y probable, se encuentra disponible en el siguiente repositorio (se utilizó el mismo para Parte 1 y parte 2, ver commit correspondiente): 
+https://github.com/santi440/ansible-redmine
