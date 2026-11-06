@@ -20,6 +20,7 @@
         | list | length > 0
     fail_msg: El servicio de PostgreSQL no está activo.
     success_msg: El servicio de PostgreSQL está activo.
+  when: redmine_verify_local_postgresql | bool
 
 - name: Buscar los procesos de Puma del usuario de la aplicación
   ansible.builtin.command:
@@ -75,6 +76,7 @@
     login_db: "{{ redmine_db_name }}"
     login_user: "{{ redmine_db_user }}"
     login_password: "{{ redmine_db_password }}"
+    ssl_mode: "{{ redmine_db_sslmode | default(omit, true) }}"
     query: SELECT 1 AS ok
   register: redmine_verify_db
   changed_when: false

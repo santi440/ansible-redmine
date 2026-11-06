@@ -13,6 +13,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Configurar OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: "1.13.2"
       - name: Instalar herramientas
         run: |
           python -m pip install --upgrade pip
@@ -23,6 +27,12 @@ jobs:
         run: yamllint .
       - name: ansible-lint
         run: ansible-lint
+      - name: tofu fmt
+        run: tofu fmt -check -recursive tofu
+      - name: tofu init
+        run: tofu -chdir=tofu init -backend=false
+      - name: tofu validate
+        run: tofu -chdir=tofu validate
 
   molecule:
     runs-on: ubuntu-latest

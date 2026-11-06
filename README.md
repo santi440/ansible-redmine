@@ -44,11 +44,13 @@ integradora_p1/
 ├── Makefile
 ├── inventory/
 │   ├── hosts.yml
-│   └── group_vars/all/
-│       ├── main.yml
-│       └── vault.yml.example
+│   ├── group_vars/all/
+│   │   ├── main.yml
+│   │   └── vault.yml.example
+│   └── aws/                 # inventario generado para AWS (no versionado)
 ├── playbooks/
 │   ├── site.yml
+│   ├── aws.yml              # instalación sobre EC2 con RDS
 │   └── verify.yml
 ├── roles/
 │   ├── redmine_common/      # paquetes, locale, usuario y /opt/redmine
@@ -56,7 +58,10 @@ integradora_p1/
 │   ├── redmine_ruby/        # rbenv, ruby-build, Ruby y bundler
 │   ├── redmine/             # descarga, configuración, Puma y systemd
 │   └── redmine_nginx/       # proxy inverso y estáticos
-├── informes/                # informe de la parte 1 (Markdown y PDF)
+├── tofu/                    # VPC, EC2 y RDS gestionados con OpenTofu
+├── scripts/                 # inventario, provisión, verificación y destroy AWS
+├── docs/aws.md              # guía de despliegue en AWS
+├── informes/                # informes de las partes 1 y 2 (Markdown y PDF)
 ├── molecule/default/        # pruebas de integración con Docker + systemd
 └── .github/workflows/ci.yml
 ```
@@ -264,25 +269,60 @@ Comprobado el 2026-11-06 sobre la box `mw-ubuntu-24.04`:
 | Segunda ejecución de `site.yml` | `ok=60`, `changed=0` |
 | `vagrant reload` + HTTP | Servicios activos y HTTP 200 |
 | `yamllint` / `ansible-lint` | Sin errores (0 fallos, 0 warnings) |
+| `tofu fmt` / `tofu validate` | Formato y configuración válidos |
+| `bash -n scripts/*.sh` | Sin errores de sintaxis |
 | `molecule test` | RC=0; idempotencia y verify correctos |
+
+## Despliegue en AWS con OpenTofu
+
+Además del flujo Vagrant, el proyecto incluye una variante sobre AWS:
+
+- OpenTofu crea la VPC, dos subredes públicas, dos privadas, la EC2, la Elastic
+  IP y una instancia **RDS PostgreSQL 16** privada.
+- La EC2 ejecuta Redmine con los mismos roles de Ansible, pero **sin** el rol
+  `redmine_database`.
+- RDS solo acepta el puerto 5432 desde el Security Group de la EC2.
+- La contraseña de RDS se pasa con `TF_VAR_db_password` y no se versiona.
+- `scripts/aws-inventory.sh` genera el inventario desde los outputs de OpenTofu.
+
+```bash
+cp tofu/terraform.tfvars.example tofu/terraform.tfvars
+export TF_VAR_db_password='una-contraseña-larga'
+
+tofu -chdir=tofu init
+tofu -chdir=tofu apply
+
+./scripts/aws-inventory.sh
+ansible-playbook -i inventory/aws/hosts.yml playbooks/aws.yml
+ansible-playbook -i inventory/aws/hosts.yml playbooks/verify.yml
+
+tofu -chdir=tofu destroy
+rm -f inventory/aws/hosts.yml
+```
+
+La guía completa, arquitectura y resolución de problemas están en
+[docs/aws.md](docs/aws.md).
 
 ## Linters y pruebas
 
 ```bash
-make lint           # yamllint + ansible-lint
+make lint           # yamllint + ansible-lint + tofu fmt
+make tofu-validate  # tofu init -backend=false + tofu validate
 make molecule       # molecule test
 make verify         # playbook de verificación contra la VM
 ```
 
 Molecule levanta un contenedor Ubuntu 24.04 con systemd, ejecuta los cinco roles
 y corre las mismas verificaciones que `playbooks/verify.yml`. El workflow de
-GitHub Actions ejecuta `yamllint`, `ansible-lint` y `molecule test`.
+GitHub Actions ejecuta `yamllint`, `ansible-lint`, `tofu fmt`, `tofu init`,
+`tofu validate` y `molecule test`.
 
 ## Informes
 
 - [Parte 1 — Redmine con Vagrant y Ansible](informes/parte-1-vagrant-ansible.pdf)
+- [Parte 2 — Redmine en AWS con EC2, RDS y OpenTofu](informes/parte-2-aws-opentofu.pdf)
 
-La fuente Markdown del informe está en `informes/`.
+Las fuentes Markdown de ambos informes están en `informes/`.
 
 ## Notas de operación
 

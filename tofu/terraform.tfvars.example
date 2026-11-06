@@ -1,0 +1,22 @@
+aws_region  = "us-east-1"
+project     = "redmine"
+environment = "lab"
+
+instance_type     = "t3.micro"
+root_volume_size  = 30
+db_instance_class = "db.t3.micro"
+db_engine_version = "16"
+
+db_name     = "redmine"
+db_username = "redmine"
+
+# La contraseña no se escribe acá: se pasa por entorno.
+# export TF_VAR_db_password='una-contraseña-larga'
+
+# Restringir SSH a la IP propia.
+ssh_public_key_path  = "~/.ssh/id_ed25519.pub"
+ssh_private_key_path = "~/.ssh/id_ed25519"
+ssh_cidr_blocks      = ["0.0.0.0/0"]
+
+# En un laboratorio se puede dejar 0.0.0.0/0 para HTTP.
+http_cidr_blocks = ["0.0.0.0/0"]

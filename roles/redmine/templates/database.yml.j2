@@ -7,3 +7,6 @@ production:
   password: "{{ redmine_db_password }}"
   encoding: utf8
   schema_search_path: public
+{% if redmine_db_sslmode | default('') | length > 0 %}
+  sslmode: {{ redmine_db_sslmode }}
+{% endif %}

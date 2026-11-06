@@ -1,14 +1,25 @@
-.PHONY: lint yamllint ansible-lint lab-secret molecule up provision verify destroy
+.PHONY: lint yamllint ansible-lint tofu-fmt tofu-validate shell lab-secret molecule up provision verify destroy
 
+TOFU_DIR := tofu
 LAB_SECRET_FILE := inventory/group_vars/all/vault.yml
 
-lint: yamllint ansible-lint
+lint: yamllint ansible-lint tofu-fmt shell
 
 yamllint:
 	yamllint .
 
 ansible-lint:
 	ansible-lint
+
+tofu-fmt:
+	tofu -chdir=$(TOFU_DIR) fmt -check -recursive
+
+tofu-validate:
+	tofu -chdir=$(TOFU_DIR) init -backend=false
+	tofu -chdir=$(TOFU_DIR) validate
+
+shell:
+	bash -n scripts/*.sh
 
 lab-secret:
 	@command -v openssl >/dev/null || { echo "ERROR: openssl no está instalado."; exit 1; }

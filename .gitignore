@@ -5,4 +5,17 @@
 .venv/
 *.retry
 *.log
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfstate
+terraform.tfstate.*
+tofu/tfplan
 inventory/group_vars/all/vault.yml
+inventory/aws/hosts.yml
+tofu/.terraform/
+tofu/*.tfstate
+tofu/*.tfstate.*
+tofu/*.tfvars
+!tofu/terraform.tfvars.example
+tofu/crash.log

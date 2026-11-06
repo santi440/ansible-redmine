@@ -21,3 +21,4 @@ ignore: |
   .git/
   .venv/
   molecule/
+  inventory/aws/hosts.yml

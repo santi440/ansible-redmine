@@ -4,8 +4,8 @@
     that:
       - redmine_db_password | length > 0
     fail_msg: >-
-      Definir redmine_db_password. Para el laboratorio ejecutá
-      'make lab-secret' o usá Ansible Vault.
+      Definir redmine_db_password. Para el laboratorio local ejecutá
+      'make lab-secret'; para AWS exportá TF_VAR_db_password.
 
 - name: Instalar PostgreSQL y el driver de Python
   ansible.builtin.apt:

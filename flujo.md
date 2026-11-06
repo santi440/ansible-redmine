@@ -257,8 +257,9 @@ make destroy    # vagrant destroy -f
 
 Dos jobs:
 
-1. `lint`: instala Ansible, colecciones, `yamllint` y `ansible-lint`; ejecuta
-   `yamllint` y `ansible-lint`.
+1. `lint`: instala Ansible, colecciones, `yamllint`, `ansible-lint` y OpenTofu;
+   ejecuta `yamllint`, `ansible-lint`, `tofu fmt -check`, `tofu init` y
+   `tofu validate`.
 2. `molecule`: depende de `lint`, instala Molecule con Docker y ejecuta
    `molecule test`.
 
@@ -310,9 +311,76 @@ Acceso web: <http://127.0.0.1:8080> con `admin` / `admin`.
 
 - `yamllint`: OK.
 - `ansible-lint`: 0 fallos, 0 warnings, perfil production.
+- `tofu fmt -check -recursive tofu`: OK.
+- `tofu validate`: configuración válida.
 - `molecule test`: RC=0; converge `ok=60`, idempotencia `ok=60 changed=0`,
   verify `ok=21 failed=0` y destroy correcto.
 - `playbooks/site.yml` dentro de la VM: `ok=60`, `failed=0`.
 - Segunda ejecución consecutiva de `site.yml`: `changed=0`.
 - `verify.yml`: `ok=21`, `failed=0`.
 - `vagrant reload`: servicios activos y habilitados, HTTP 200.
+- La variante AWS quedó validada estáticamente con `tofu fmt` y `tofu validate`;
+  no se dejaron recursos activos para evitar costos.
+
+---
+
+## 11. Variante AWS con OpenTofu
+
+Se agrega una segunda forma de ejecutar la misma aplicación, sin reemplazar el
+flujo Vagrant:
+
+```text
+OpenTofu
+  ├── VPC, subredes públicas y privadas
+  ├── Security Groups
+  ├── Key Pair + EC2 Ubuntu 24.04
+  ├── Elastic IP
+  └── RDS PostgreSQL 16 privada
+        │
+        └── 5432 solo desde el Security Group de EC2
+
+Ansible
+  └── playbooks/aws.yml
+      ├── redmine_common
+      ├── redmine_ruby
+      ├── redmine
+      └── redmine_nginx
+```
+
+Cambios concretos:
+
+- Se agrega `tofu/` con todos los recursos de AWS declarados.
+- Se agrega `playbooks/aws.yml`, que no ejecuta `redmine_database` porque la base
+  ya existe en RDS.
+- El rol `redmine` admite `redmine_db_sslmode`; para RDS se usa `require`.
+- `redmine_verify_local_postgresql: false` evita que `verify.yml` exija un
+  servicio PostgreSQL local en la EC2.
+- `roles/redmine/templates/database.yml.j2` agrega `sslmode` solo cuando la
+  variable tiene valor, para no romper Vagrant ni Molecule.
+- Los módulos `community.postgresql` reciben `ssl_mode` con `omit` cuando la
+  variable está vacía.
+- `scripts/aws-inventory.sh` genera `inventory/aws/hosts.yml` desde los outputs
+  de OpenTofu. Es el único script de AWS: el resto del flujo se ejecuta con
+  comandos de OpenTofu y Ansible.
+- La contraseña de RDS se pasa por `TF_VAR_db_password`; el inventario la lee
+  con `lookup('env', ...)` y no la escribe en disco.
+- El workflow de CI valida el formato y la configuración de OpenTofu.
+
+Comandos:
+
+```bash
+cp tofu/terraform.tfvars.example tofu/terraform.tfvars
+export TF_VAR_db_password='una-contraseña-larga'
+
+tofu -chdir=tofu init
+tofu -chdir=tofu apply
+
+./scripts/aws-inventory.sh
+ansible-playbook -i inventory/aws/hosts.yml playbooks/aws.yml
+ansible-playbook -i inventory/aws/hosts.yml playbooks/verify.yml
+
+tofu -chdir=tofu destroy
+rm -f inventory/aws/hosts.yml
+```
+
+La guía completa está en [`docs/aws.md`](docs/aws.md).

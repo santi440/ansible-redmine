@@ -1,0 +1,25 @@
+---
+- name: Esperar a que la instancia EC2 esté accesible
+  hosts: aws
+  gather_facts: false
+
+  tasks:
+    - name: Esperar a que SSH acepte conexiones
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 300
+
+    - name: Esperar a que cloud-init termine
+      ansible.builtin.raw: cloud-init status --wait
+      changed_when: false
+
+- name: Instalar Redmine sobre AWS con RDS
+  hosts: aws
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: redmine_common
+    - role: redmine_ruby
+    - role: redmine
+    - role: redmine_nginx

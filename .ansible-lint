@@ -10,3 +10,5 @@ exclude_paths:
   - .git/
   - .venv/
   - molecule/
+  - tofu/
+  - inventory/aws/

@@ -18,6 +18,8 @@ redmine_db_password: ""
 redmine_db_host: 127.0.0.1
 redmine_db_port: 5432
 redmine_db_adapter: postgresql
+redmine_db_sslmode: ""
+redmine_verify_local_postgresql: true
 
 redmine_host_name: "127.0.0.1:8080"
 redmine_http_port: 80
