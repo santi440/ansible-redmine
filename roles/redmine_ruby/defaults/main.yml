@@ -1,0 +1,7 @@
+---
+redmine_user: redmine
+redmine_group: redmine
+redmine_home: /home/redmine
+redmine_ruby_version: "4.0.9"
+redmine_rbenv_root: "{{ redmine_home }}/.rbenv"
+redmine_ruby_configure_opts: "--disable-install-doc"

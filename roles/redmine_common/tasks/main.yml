@@ -1,0 +1,69 @@
+---
+- name: Verificar que el sistema operativo sea Ubuntu 24.04
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution'] == 'Ubuntu'
+      - ansible_facts['distribution_version'] is version('24.04', '>=')
+    fail_msg: >-
+      Este role está preparado para Ubuntu 24.04 o superior. Detectado:
+      {{ ansible_facts['distribution'] }}
+      {{ ansible_facts['distribution_version'] }}.
+
+- name: Actualizar el índice de paquetes
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Instalar los paquetes base
+  ansible.builtin.apt:
+    name: "{{ redmine_common_packages }}"
+    state: present
+
+- name: Crear el grupo de la aplicación
+  ansible.builtin.group:
+    name: "{{ redmine_group }}"
+    system: true
+    state: present
+
+- name: Crear el usuario de la aplicación
+  ansible.builtin.user:
+    name: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    home: "{{ redmine_home }}"
+    create_home: true
+    shell: /bin/bash
+    system: true
+    comment: Redmine application user
+    state: present
+
+- name: Agregar al usuario de Nginx al grupo de la aplicación para acceso seguro al socket
+  ansible.builtin.user:
+    name: www-data
+    groups: "{{ redmine_group }}"
+    append: true
+    state: present
+
+- name: Restringir el acceso al home de la aplicación
+  ansible.builtin.file:
+    path: "{{ redmine_home }}"
+    state: directory
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0750"
+
+- name: Configurar el locale
+  community.general.locale_gen:
+    name: "{{ redmine_locale }}"
+    state: present
+
+- name: Configurar la zona horaria
+  community.general.timezone:
+    name: "{{ redmine_timezone }}"
+
+- name: Crear el directorio de instalación de Redmine
+  ansible.builtin.file:
+    path: "{{ redmine_root }}"
+    state: directory
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0755"

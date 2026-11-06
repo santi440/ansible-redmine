@@ -1,0 +1,10 @@
+---
+- name: Verificar la instalación de Redmine
+  hosts: redmine
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Ejecutar las comprobaciones del role redmine
+      ansible.builtin.import_role:
+        name: redmine
+        tasks_from: verify.yml

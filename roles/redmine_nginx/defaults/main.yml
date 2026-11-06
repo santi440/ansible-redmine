@@ -1,0 +1,10 @@
+---
+redmine_http_port: 80
+redmine_server_name: _
+redmine_root: /opt/redmine
+redmine_puma_socket: "{{ redmine_root }}/tmp/puma.sock"
+redmine_client_max_body_size: 20m
+redmine_static_expires: 30d
+redmine_nginx_site_name: redmine
+redmine_nginx_conf_path: "/etc/nginx/sites-available/{{ redmine_nginx_site_name }}"
+redmine_nginx_enabled_path: "/etc/nginx/sites-enabled/{{ redmine_nginx_site_name }}"

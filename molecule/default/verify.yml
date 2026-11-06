@@ -1,0 +1,10 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Ejecutar las verificaciones del role redmine
+      ansible.builtin.import_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine"
+        tasks_from: verify.yml

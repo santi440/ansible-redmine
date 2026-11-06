@@ -1,0 +1,5 @@
+# Managed by Ansible
+local   all       all                      peer
+{% for cidr in redmine_db_allowed_cidrs %}
+host    all       all       {{ cidr }}   scram-sha-256
+{% endfor %}

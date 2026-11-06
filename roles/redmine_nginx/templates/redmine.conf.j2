@@ -1,0 +1,62 @@
+upstream redmine_app {
+    server unix:{{ redmine_puma_socket }} fail_timeout=0;
+}
+
+server {
+    listen {{ redmine_http_port }} default_server;
+    listen [::]:{{ redmine_http_port }} default_server;
+
+    server_name {{ redmine_server_name }};
+    root {{ redmine_root }}/public;
+
+    access_log /var/log/nginx/redmine_access.log;
+    error_log  /var/log/nginx/redmine_error.log;
+
+    client_max_body_size {{ redmine_client_max_body_size }};
+
+    proxy_set_header Host $http_host;
+
+    set $client_port $server_port;
+    if ($http_host ~* :([0-9]+)$) {
+        set $client_port $1;
+    }
+
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host  $http_host;
+    proxy_set_header X-Forwarded-Port  $client_port;
+
+    location /assets/ {
+        alias {{ redmine_root }}/public/assets/;
+        access_log off;
+        expires {{ redmine_static_expires }};
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location /help/ {
+        try_files $uri $uri/ =404;
+        access_log off;
+    }
+
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+    }
+
+    location ~ ^/(robots|humans)\.txt$ {
+        log_not_found off;
+        access_log off;
+    }
+
+    location ~ ^/(404|422|500|502|503|504)\.html$ {
+        root {{ redmine_root }}/public;
+    }
+
+    location / {
+        proxy_pass http://redmine_app;
+        proxy_redirect off;
+        proxy_read_timeout 300;
+    }
+}

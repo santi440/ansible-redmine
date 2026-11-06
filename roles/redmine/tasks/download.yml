@@ -1,0 +1,47 @@
+---
+- name: Descargar el checksum publicado de Redmine
+  ansible.builtin.get_url:
+    url: "{{ redmine_checksum_url }}"
+    dest: "/tmp/redmine-{{ redmine_version }}.tar.gz.sha256"
+    mode: "0644"
+
+- name: Leer el checksum publicado
+  ansible.builtin.slurp:
+    src: "/tmp/redmine-{{ redmine_version }}.tar.gz.sha256"
+  register: redmine_checksum_file
+
+- name: Extraer el hash SHA256 esperado
+  ansible.builtin.set_fact:
+    redmine_expected_checksum: >-
+      {{ (redmine_checksum_file.content | b64decode)
+         | regex_search('[0-9a-f]{64}') }}
+
+- name: Verificar que el checksum tenga el formato esperado
+  ansible.builtin.assert:
+    that:
+      - redmine_expected_checksum | length == 64
+    fail_msg: No se pudo interpretar el checksum publicado por Redmine.
+
+- name: Descargar el paquete de Redmine
+  ansible.builtin.get_url:
+    url: "{{ redmine_download_url }}"
+    dest: "/tmp/redmine-{{ redmine_version }}.tar.gz"
+    checksum: "sha256:{{ redmine_expected_checksum }}"
+    mode: "0644"
+
+- name: Descomprimir Redmine en /opt/redmine
+  ansible.builtin.unarchive:
+    src: "/tmp/redmine-{{ redmine_version }}.tar.gz"
+    dest: "{{ redmine_root }}"
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+    creates: "{{ redmine_root }}/Gemfile"
+
+- name: Ajustar la propiedad del árbol de Redmine
+  ansible.builtin.file:
+    path: "{{ redmine_root }}"
+    state: directory
+    recurse: true
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"

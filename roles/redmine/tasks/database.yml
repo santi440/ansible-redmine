@@ -1,0 +1,116 @@
+---
+- name: Comprobar las dependencias de Ruby
+  ansible.builtin.command:
+    cmd: "{{ redmine_rbenv_root }}/bin/rbenv exec bundle check"
+    chdir: "{{ redmine_root }}"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    RAILS_ENV: production
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  register: redmine_bundle_check
+  changed_when: false
+  failed_when: redmine_bundle_check.rc not in [0, 1]
+
+- name: Instalar las gemas de Redmine
+  ansible.builtin.command:
+    cmd: "{{ redmine_rbenv_root }}/bin/rbenv exec bundle install --jobs 1"
+    chdir: "{{ redmine_root }}"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    RAILS_ENV: production
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  changed_when: true
+  when: redmine_bundle_check.rc != 0
+
+- name: Comprobar el token de sesión
+  ansible.builtin.stat:
+    path: "{{ redmine_root }}/config/initializers/secret_token.rb"
+  register: redmine_secret_token
+
+- name: Generar el token de sesión
+  ansible.builtin.command:
+    cmd: >-
+      {{ redmine_rbenv_root }}/bin/rbenv exec bundle exec
+      rake generate_secret_token
+    chdir: "{{ redmine_root }}"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    RAILS_ENV: production
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  changed_when: true
+  when: not redmine_secret_token.stat.exists
+
+- name: Aplicar las migraciones de la base de datos
+  ansible.builtin.command:
+    cmd: "{{ redmine_rbenv_root }}/bin/rbenv exec bundle exec rake db:migrate"
+    chdir: "{{ redmine_root }}"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    RAILS_ENV: production
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  changed_when: false
+
+- name: Comprobar si los datos por defecto ya están cargados
+  community.postgresql.postgresql_query:
+    login_host: "{{ redmine_db_host }}"
+    login_port: "{{ redmine_db_port }}"
+    login_db: "{{ redmine_db_name }}"
+    login_user: "{{ redmine_db_user }}"
+    login_password: "{{ redmine_db_password }}"
+    query: >-
+      SELECT (
+        (SELECT COUNT(*) FROM roles WHERE builtin = 0) +
+        (SELECT COUNT(*) FROM trackers) +
+        (SELECT COUNT(*) FROM issue_statuses) +
+        (SELECT COUNT(*) FROM enumerations) +
+        (SELECT COUNT(*) FROM queries)
+      ) AS total
+  register: redmine_settings
+  changed_when: false
+  no_log: true
+
+- name: Cargar los datos por defecto de Redmine
+  ansible.builtin.command:
+    cmd: >-
+      {{ redmine_rbenv_root }}/bin/rbenv exec bundle exec
+      rake redmine:load_default_data
+    chdir: "{{ redmine_root }}"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    RAILS_ENV: production
+    REDMINE_LANG: "{{ redmine_language }}"
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  changed_when: true
+  when: redmine_settings.query_result[0].total | int == 0
+
+- name: Ajustar el host_name de Redmine
+  ansible.builtin.command:
+    cmd: >-
+      {{ redmine_rbenv_root }}/bin/rbenv exec bundle exec
+      rails runner "s = Setting.find_or_initialize_by(name: 'host_name');
+      s.value = ENV.fetch('REDMINE_HOST_NAME'); s.save!"
+    chdir: "{{ redmine_root }}"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    RAILS_ENV: production
+    REDMINE_HOST_NAME: "{{ redmine_host_name }}"
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  changed_when: false

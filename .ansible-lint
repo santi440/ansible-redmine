@@ -1,0 +1,12 @@
+---
+profile: production
+
+skip_list:
+  - var-naming[no-role-prefix]
+
+exclude_paths:
+  - .ansible/
+  - .cache/
+  - .git/
+  - .venv/
+  - molecule/

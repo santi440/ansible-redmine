@@ -1,0 +1,9 @@
+production:
+  adapter: {{ redmine_db_adapter }}
+  database: {{ redmine_db_name }}
+  host: {{ redmine_db_host }}
+  port: {{ redmine_db_port }}
+  username: {{ redmine_db_user }}
+  password: "{{ redmine_db_password }}"
+  encoding: utf8
+  schema_search_path: public

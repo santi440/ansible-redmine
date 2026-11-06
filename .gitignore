@@ -1,0 +1,8 @@
+.vagrant/
+.vagrant.d/
+.ansible/
+.cache/
+.venv/
+*.retry
+*.log
+inventory/group_vars/all/vault.yml

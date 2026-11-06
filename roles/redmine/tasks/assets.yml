@@ -1,0 +1,22 @@
+---
+- name: Comprobar si los assets ya fueron precompilados
+  ansible.builtin.find:
+    paths: "{{ redmine_root }}/public/assets"
+    patterns: "*"
+    hidden: true
+    file_type: any
+  register: redmine_assets_found
+
+- name: Precompilar los assets estáticos
+  ansible.builtin.command:
+    cmd: "{{ redmine_rbenv_root }}/bin/rbenv exec bundle exec rake assets:precompile"
+    chdir: "{{ redmine_root }}"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    RAILS_ENV: production
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  changed_when: true
+  when: redmine_assets_found.matched == 0 or redmine_recompile_assets | bool

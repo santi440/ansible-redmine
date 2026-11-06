@@ -1,0 +1,71 @@
+---
+- name: Crear el directorio de configuración de bundler
+  ansible.builtin.file:
+    path: "{{ redmine_root }}/.bundle"
+    state: directory
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0750"
+
+- name: Configurar bundler
+  ansible.builtin.copy:
+    dest: "{{ redmine_root }}/.bundle/config"
+    content: |
+      ---
+      BUNDLE_PATH: "vendor/bundle"
+      BUNDLE_WITHOUT: "development:test"
+      BUNDLE_JOBS: "1"
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0640"
+
+- name: Escribir la configuración de la base de datos
+  ansible.builtin.template:
+    src: database.yml.j2
+    dest: "{{ redmine_root }}/config/database.yml"
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0640"
+  no_log: true
+  notify: Reiniciar Redmine
+
+- name: Declarar Puma en Gemfile.local
+  ansible.builtin.template:
+    src: Gemfile.local.j2
+    dest: "{{ redmine_root }}/Gemfile.local"
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0644"
+  notify: Reiniciar Redmine
+
+- name: Escribir la configuración de Puma
+  ansible.builtin.template:
+    src: puma.rb.j2
+    dest: "{{ redmine_root }}/config/puma.rb"
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0644"
+  notify: Reiniciar Redmine
+
+- name: Crear los directorios de trabajo
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0755"
+  loop:
+    - "{{ redmine_root }}/files"
+    - "{{ redmine_root }}/log"
+    - "{{ redmine_root }}/public/assets"
+    - "{{ redmine_root }}/tmp"
+    - "{{ redmine_root }}/tmp/cache"
+    - "{{ redmine_root }}/tmp/pdf"
+    - "{{ redmine_root }}/tmp/pids"
+
+- name: Desactivar el servidor de estáticos de Rails
+  ansible.builtin.replace:
+    path: "{{ redmine_root }}/config/environments/production.rb"
+    regexp: '^(\s*)#?\s*(config\.public_file_server\.enabled\s*=\s*.*)$'
+    replace: '\1\2'
+  notify: Reiniciar Redmine

@@ -1,0 +1,8 @@
+---
+# Para el laboratorio se puede generar un secreto local con:
+#   make lab-secret
+#
+# Para un entorno real, copiar este archivo a vault.yml, cambiar el valor y
+# cifrarlo con:
+#   ansible-vault encrypt inventory/group_vars/all/vault.yml
+vault_redmine_db_password: "CAMBIAR-esta-password"

@@ -1,0 +1,27 @@
+[Unit]
+Description=Redmine {{ redmine_version }} application server (Puma)
+Documentation=https://www.redmine.org/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ redmine_user }}
+Group={{ redmine_group }}
+WorkingDirectory={{ redmine_root }}
+Environment=RAILS_ENV=production
+Environment=RBENV_ROOT={{ redmine_rbenv_root }}
+Environment=PATH={{ redmine_rbenv_root }}/shims:{{ redmine_rbenv_root }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=REDMINE_WORKERS={{ redmine_puma_workers }}
+Environment=REDMINE_MAX_THREADS={{ redmine_puma_threads }}
+ExecStart={{ redmine_rbenv_root }}/bin/rbenv exec bundle exec puma -C {{ redmine_root }}/config/puma.rb
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=false
+ProtectSystem=full
+ProtectHome=false
+ReadWritePaths={{ redmine_root }}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,154 @@
+---
+- name: Reunir el estado de los servicios
+  ansible.builtin.service_facts:
+
+- name: Verificar los servicios de Redmine y Nginx
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.services['redmine.service'].state | default('') == 'running'
+      - ansible_facts.services['nginx.service'].state | default('') == 'running'
+    fail_msg: Alguno de los servicios redmine o nginx no está activo.
+    success_msg: Los servicios redmine y nginx están activos.
+
+- name: Verificar el servicio de PostgreSQL
+  ansible.builtin.assert:
+    that:
+      - >-
+        ansible_facts.services | dict2items
+        | selectattr('key', 'match', '^postgresql')
+        | selectattr('value.state', 'eq', 'running')
+        | list | length > 0
+    fail_msg: El servicio de PostgreSQL no está activo.
+    success_msg: El servicio de PostgreSQL está activo.
+
+- name: Buscar los procesos de Puma del usuario de la aplicación
+  ansible.builtin.command:
+    cmd: pgrep -u {{ redmine_user }} -f '[p]uma'
+  register: redmine_process_users
+  changed_when: false
+  failed_when: false
+
+- name: Validar que Puma corra como el usuario de la aplicación
+  ansible.builtin.assert:
+    that:
+      - redmine_process_users.stdout_lines | length > 0
+    fail_msg: No se encontraron procesos de Puma ejecutados por {{ redmine_user }}.
+    success_msg: Redmine corre como {{ redmine_user }}.
+
+- name: Buscar procesos de Puma ejecutados por root
+  ansible.builtin.command:
+    cmd: pgrep -u root -f '[p]uma'
+  register: redmine_root_processes
+  changed_when: false
+  failed_when: false
+
+- name: Validar que Puma no corra como root
+  ansible.builtin.assert:
+    that:
+      - redmine_root_processes.stdout_lines | length == 0
+    fail_msg: Se encontraron procesos de Puma ejecutados por root.
+    success_msg: Puma no corre como root.
+
+- name: Verificar la versión de Ruby de rbenv
+  ansible.builtin.command:
+    cmd: "{{ redmine_rbenv_root }}/bin/rbenv exec ruby -v"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  register: redmine_verify_ruby
+  changed_when: false
+
+- name: Validar la versión de Ruby
+  ansible.builtin.assert:
+    that:
+      - redmine_ruby_version in redmine_verify_ruby.stdout
+    fail_msg: Ruby no está en la versión esperada.
+    success_msg: Ruby {{ redmine_ruby_version }} está activo mediante rbenv.
+
+- name: Comprobar la conexión a PostgreSQL
+  community.postgresql.postgresql_query:
+    login_host: "{{ redmine_db_host }}"
+    login_port: "{{ redmine_db_port }}"
+    login_db: "{{ redmine_db_name }}"
+    login_user: "{{ redmine_db_user }}"
+    login_password: "{{ redmine_db_password }}"
+    query: SELECT 1 AS ok
+  register: redmine_verify_db
+  changed_when: false
+  no_log: true
+
+- name: Validar la conexión a PostgreSQL
+  ansible.builtin.assert:
+    that:
+      - redmine_verify_db.query_result[0].ok == 1
+    fail_msg: No se pudo consultar la base de datos de Redmine.
+    success_msg: La base de datos de Redmine responde correctamente.
+
+- name: Verificar que Redmine responda por HTTP a través de Nginx
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ redmine_http_port }}/"
+    status_code: 200
+    return_content: true
+  register: redmine_verify_http
+
+- name: Validar la respuesta de Redmine
+  ansible.builtin.assert:
+    that:
+      - "'Redmine' in redmine_verify_http.content"
+    fail_msg: La respuesta HTTP no parece ser de Redmine.
+    success_msg: Redmine responde por HTTP a través de Nginx.
+
+- name: Buscar un asset CSS precompilado
+  ansible.builtin.find:
+    paths: "{{ redmine_root }}/public/assets"
+    patterns: "application-*.css"
+    file_type: file
+  register: redmine_verify_assets
+
+- name: Verificar que exista al menos un asset precompilado
+  ansible.builtin.assert:
+    that:
+      - redmine_verify_assets.matched > 0
+    fail_msg: No se encontraron assets CSS precompilados.
+    success_msg: Los assets estáticos fueron precompilados.
+
+- name: Obtener la ruta relativa del asset
+  ansible.builtin.set_fact:
+    redmine_verify_asset_path: >-
+      {{ redmine_verify_assets.files[0].path
+         | regex_replace('^' ~ (redmine_root | regex_escape) ~ '/public', '') }}
+
+- name: Solicitar el asset a través de Nginx
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ redmine_http_port }}{{ redmine_verify_asset_path }}"
+    status_code: 200
+  register: redmine_verify_static
+
+- name: Validar que el estático lo sirva Nginx
+  ansible.builtin.assert:
+    that:
+      - >-
+        'nginx' in (redmine_verify_static.server | default(''))
+      - redmine_verify_static.x_runtime is not defined
+    fail_msg: El contenido estático no parece estar siendo servido por Nginx.
+    success_msg: Nginx sirve el contenido estático sin pasar por Ruby.
+
+- name: Consultar el asset directamente a Puma por su socket  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: >-
+      curl -s -o /dev/null -w '%{http_code}' --unix-socket
+      {{ redmine_puma_socket }} -H 'Host: 127.0.0.1'
+      http://localhost{{ redmine_verify_asset_path }}
+  register: redmine_verify_puma_static
+  changed_when: false
+  failed_when: false
+
+- name: Validar que Ruby no sirva contenido estático
+  ansible.builtin.assert:
+    that:
+      - redmine_verify_puma_static.stdout == '404'
+    fail_msg: Ruby/Puma está sirviendo contenido estático.
+    success_msg: Ruby/Puma no sirve contenido estático; lo hace Nginx.

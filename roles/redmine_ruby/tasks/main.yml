@@ -1,0 +1,101 @@
+---
+- name: Instalar rbenv
+  ansible.builtin.git:
+    repo: https://github.com/rbenv/rbenv.git
+    dest: "{{ redmine_rbenv_root }}"
+    version: master
+    depth: 1
+    update: false
+  become: true
+  become_user: "{{ redmine_user }}"
+
+- name: Instalar el plugin ruby-build
+  ansible.builtin.git:
+    repo: https://github.com/rbenv/ruby-build.git
+    dest: "{{ redmine_rbenv_root }}/plugins/ruby-build"
+    version: master
+    depth: 1
+    update: false
+  become: true
+  become_user: "{{ redmine_user }}"
+
+- name: Configurar rbenv en el shell del usuario
+  ansible.builtin.blockinfile:
+    path: "{{ redmine_home }}/.bashrc"
+    create: true
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0644"
+    marker: "# {mark} ANSIBLE MANAGED RBENV"
+    block: |
+      export RBENV_ROOT="{{ redmine_rbenv_root }}"
+      export PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
+      eval "$(rbenv init - bash)"
+
+- name: Compilar e instalar Ruby con rbenv
+  ansible.builtin.command:
+    cmd: >-
+      {{ redmine_rbenv_root }}/bin/rbenv install -s
+      {{ redmine_ruby_version }}
+    creates: "{{ redmine_rbenv_root }}/versions/{{ redmine_ruby_version }}/bin/ruby"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    RUBY_CONFIGURE_OPTS: "{{ redmine_ruby_configure_opts }}"
+    TMPDIR: /var/tmp
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+
+- name: Fijar la versión global de Ruby
+  ansible.builtin.copy:
+    content: "{{ redmine_ruby_version }}\n"
+    dest: "{{ redmine_rbenv_root }}/version"
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0644"
+
+- name: Instalar bundler con la Ruby de rbenv
+  ansible.builtin.command:
+    cmd: >-
+      {{ redmine_rbenv_root }}/bin/rbenv exec gem install bundler
+      --no-document
+    creates: "{{ redmine_rbenv_root }}/versions/{{ redmine_ruby_version }}/bin/bundle"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+
+- name: Actualizar los shims de rbenv
+  ansible.builtin.command:
+    cmd: "{{ redmine_rbenv_root }}/bin/rbenv rehash"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  changed_when: false
+
+- name: Comprobar la versión de Ruby en uso
+  ansible.builtin.command:
+    cmd: "{{ redmine_rbenv_root }}/bin/rbenv exec ruby -v"
+  environment:
+    RBENV_ROOT: "{{ redmine_rbenv_root }}"
+    PATH: >-
+      {{ redmine_rbenv_root }}/bin:{{ redmine_rbenv_root }}/shims:/usr/local/bin:/usr/bin:/bin
+  become: true
+  become_user: "{{ redmine_user }}"
+  register: redmine_ruby_check
+  changed_when: false
+
+- name: Verificar que la Ruby de rbenv sea la versión esperada
+  ansible.builtin.assert:
+    that:
+      - redmine_ruby_version in redmine_ruby_check.stdout
+    fail_msg: >-
+      Ruby no quedó en la versión esperada. Salida: {{ redmine_ruby_check.stdout }}
+    success_msg: >-
+      Ruby {{ redmine_ruby_version }} instalado con rbenv y fuera del sistema.

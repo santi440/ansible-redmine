@@ -1,0 +1,44 @@
+---
+redmine_user: redmine
+redmine_group: redmine
+redmine_home: /home/redmine
+redmine_root: /opt/redmine
+
+redmine_locale: es_ES.UTF-8
+redmine_timezone: America/Argentina/Buenos_Aires
+
+redmine_common_packages:
+  - acl
+  - apt-transport-https
+  - autoconf
+  - bison
+  - build-essential
+  - ca-certificates
+  - curl
+  - ghostscript
+  - git
+  - gnupg
+  - imagemagick
+  - libdb-dev
+  - libffi-dev
+  - libgdbm-dev
+  - libgmp-dev
+  - libncurses-dev
+  - libpq-dev
+  - libreadline-dev
+  - libssl-dev
+  - libxml2-dev
+  - libxslt1-dev
+  - libyaml-dev
+  - locales
+  - logrotate
+  - patch
+  - pkg-config
+  - python3-psycopg2
+  - rsync
+  - rustc
+  - sudo
+  - tzdata
+  - uuid-dev
+  - wget
+  - zlib1g-dev

@@ -1,0 +1,14 @@
+workers {{ redmine_puma_workers }}
+threads_count = {{ redmine_puma_threads }}
+threads threads_count, threads_count
+
+bind "unix://{{ redmine_puma_socket }}?umask=0007"
+environment ENV.fetch("RAILS_ENV", "production")
+
+directory "{{ redmine_root }}"
+rackup "{{ redmine_root }}/config.ru"
+pidfile "{{ redmine_root }}/tmp/pids/puma.pid"
+
+preload_app!
+
+plugin :tmp_restart

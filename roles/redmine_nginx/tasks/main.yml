@@ -1,0 +1,58 @@
+---
+- name: Instalar Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Eliminar el sitio por defecto de Nginx
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify:
+    - Validar la configuración de Nginx
+    - Recargar Nginx
+
+- name: Escribir la configuración del sitio de Redmine
+  ansible.builtin.template:
+    src: redmine.conf.j2
+    dest: "{{ redmine_nginx_conf_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Validar la configuración de Nginx
+    - Recargar Nginx
+
+- name: Habilitar el sitio de Redmine
+  ansible.builtin.file:
+    src: "{{ redmine_nginx_conf_path }}"
+    dest: "{{ redmine_nginx_enabled_path }}"
+    state: link
+  notify:
+    - Validar la configuración de Nginx
+    - Recargar Nginx
+
+- name: Crear el directorio de configuración de systemd para Nginx
+  ansible.builtin.file:
+    path: /etc/systemd/system/nginx.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Hacer que Nginx arranque después de Redmine
+  ansible.builtin.template:
+    src: nginx-order.conf.j2
+    dest: /etc/systemd/system/nginx.service.d/redmine-order.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Validar la configuración de Nginx
+    - Recargar Nginx
+
+- name: Asegurar que Nginx esté activo al arrancar
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

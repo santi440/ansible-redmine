@@ -1,0 +1,28 @@
+---
+- name: Verificar variables obligatorias
+  ansible.builtin.assert:
+    that:
+      - redmine_version | length > 0
+      - redmine_ruby_version | length > 0
+      - redmine_db_name | length > 0
+      - redmine_db_user | length > 0
+      - redmine_db_password | length > 0
+    fail_msg: >-
+      Definir redmine_version, redmine_ruby_version, redmine_db_name,
+      redmine_db_user y redmine_db_password. Para el laboratorio ejecutá
+      'make lab-secret' o usá Ansible Vault.
+
+- name: Descargar Redmine
+  ansible.builtin.import_tasks: download.yml
+
+- name: Configurar Redmine
+  ansible.builtin.import_tasks: configure.yml
+
+- name: Preparar la base de datos de Redmine
+  ansible.builtin.import_tasks: database.yml
+
+- name: Precompilar los assets estáticos
+  ansible.builtin.import_tasks: assets.yml
+
+- name: Configurar el servicio de Redmine
+  ansible.builtin.import_tasks: service.yml

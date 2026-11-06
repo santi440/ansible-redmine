@@ -1,0 +1,15 @@
+---
+redmine_db_name: redmine
+redmine_db_user: redmine
+redmine_db_password: ""
+redmine_db_host: 127.0.0.1
+redmine_db_port: 5432
+redmine_db_listen_addresses: localhost
+redmine_db_allowed_cidrs:
+  - 127.0.0.1/32
+  - ::1/128
+
+redmine_database_packages:
+  - postgresql
+  - postgresql-contrib
+  - python3-psycopg2

@@ -1,0 +1,30 @@
+---
+redmine_user: redmine
+redmine_group: redmine
+redmine_home: /home/redmine
+redmine_root: /opt/redmine
+
+redmine_version: "7.0.3"
+redmine_download_url: >-
+  https://www.redmine.org/releases/redmine-{{ redmine_version }}.tar.gz
+redmine_checksum_url: "{{ redmine_download_url }}.sha256"
+
+redmine_ruby_version: "4.0.9"
+redmine_rbenv_root: "{{ redmine_home }}/.rbenv"
+
+redmine_db_name: redmine
+redmine_db_user: redmine
+redmine_db_password: ""
+redmine_db_host: 127.0.0.1
+redmine_db_port: 5432
+redmine_db_adapter: postgresql
+
+redmine_host_name: "127.0.0.1:8080"
+redmine_http_port: 80
+redmine_language: es
+
+redmine_puma_workers: 2
+redmine_puma_threads: 5
+redmine_puma_socket: "{{ redmine_root }}/tmp/puma.sock"
+
+redmine_recompile_assets: false

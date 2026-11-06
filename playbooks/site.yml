@@ -1,0 +1,11 @@
+---
+- name: Instalar y configurar Redmine
+  hosts: redmine
+  become: true
+  gather_facts: true
+  roles:
+    - role: redmine_common
+    - role: redmine_database
+    - role: redmine_ruby
+    - role: redmine
+    - role: redmine_nginx

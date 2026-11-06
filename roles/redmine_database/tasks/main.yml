@@ -1,0 +1,79 @@
+---
+- name: Verificar que la contraseña de la base esté definida
+  ansible.builtin.assert:
+    that:
+      - redmine_db_password | length > 0
+    fail_msg: >-
+      Definir redmine_db_password. Para el laboratorio ejecutá
+      'make lab-secret' o usá Ansible Vault.
+
+- name: Instalar PostgreSQL y el driver de Python
+  ansible.builtin.apt:
+    name: "{{ redmine_database_packages }}"
+    state: present
+
+- name: Determinar la versión de PostgreSQL instalada
+  ansible.builtin.shell:
+    cmd: set -o pipefail && ls -1 /etc/postgresql | sort -V | tail -n 1
+    executable: /bin/bash
+  register: redmine_pg_version
+  changed_when: false
+  check_mode: false
+
+- name: Registrar el directorio de configuración de PostgreSQL
+  ansible.builtin.set_fact:
+    redmine_pg_conf_dir: >-
+      /etc/postgresql/{{ redmine_pg_version.stdout | trim }}/main
+
+- name: Asegurar que PostgreSQL esté activo al arrancar
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Configurar las direcciones de escucha de PostgreSQL
+  ansible.builtin.lineinfile:
+    path: "{{ redmine_pg_conf_dir }}/postgresql.conf"
+    regexp: '^\s*#?\s*listen_addresses\s*='
+    line: "listen_addresses = '{{ redmine_db_listen_addresses }}'"
+    firstmatch: true
+  notify: Reiniciar PostgreSQL
+
+- name: Configurar el puerto de PostgreSQL
+  ansible.builtin.lineinfile:
+    path: "{{ redmine_pg_conf_dir }}/postgresql.conf"
+    regexp: '^\s*#?\s*port\s*='
+    line: "port = {{ redmine_db_port }}"
+    firstmatch: true
+  notify: Reiniciar PostgreSQL
+
+- name: Configurar la autenticación de PostgreSQL
+  ansible.builtin.template:
+    src: pg_hba.conf.j2
+    dest: "{{ redmine_pg_conf_dir }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  notify: Reiniciar PostgreSQL
+
+- name: Aplicar la configuración de PostgreSQL antes de crear la base
+  ansible.builtin.meta: flush_handlers
+
+- name: Crear el rol de Redmine
+  community.postgresql.postgresql_user:
+    name: "{{ redmine_db_user }}"
+    password: "{{ redmine_db_password }}"
+    role_attr_flags: LOGIN,NOINHERIT
+    state: present
+  become: true
+  become_user: postgres
+  no_log: true
+
+- name: Crear la base de datos de Redmine
+  community.postgresql.postgresql_db:
+    name: "{{ redmine_db_name }}"
+    owner: "{{ redmine_db_user }}"
+    encoding: UTF8
+    state: present
+  become: true
+  become_user: postgres

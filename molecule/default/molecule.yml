@@ -1,0 +1,36 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: redmine-ubuntu-2404
+    image: geerlingguy/docker-ubuntu2404-ansible:latest
+    pre_build_image: true
+    privileged: true
+    command: /usr/sbin/init
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    tmpfs:
+      - /run
+    groups:
+      - redmine
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        redmine_version: "7.0.3"
+        redmine_ruby_version: "4.0.9"
+        redmine_db_name: redmine
+        redmine_db_user: redmine
+        redmine_db_password: Redmine_Molecule_2026
+        redmine_db_host: 127.0.0.1
+        redmine_db_port: 5432
+        redmine_host_name: "127.0.0.1"
+        redmine_http_port: 80
+        redmine_puma_workers: 1
+        redmine_puma_threads: 5
+verifier:
+  name: ansible

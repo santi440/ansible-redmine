@@ -1,0 +1,11 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine_common"
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine_database"
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine_ruby"
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine"
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine_nginx"

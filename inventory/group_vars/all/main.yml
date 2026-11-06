@@ -1,0 +1,23 @@
+---
+redmine_version: "7.0.3"
+redmine_ruby_version: "4.0.9"
+
+redmine_user: redmine
+redmine_group: redmine
+redmine_home: /home/redmine
+redmine_root: /opt/redmine
+
+redmine_host_name: "127.0.0.1:8080"
+redmine_http_port: 80
+
+redmine_db_name: redmine
+redmine_db_user: redmine
+redmine_db_password: "{{ vault_redmine_db_password | default('') }}"
+redmine_db_host: 127.0.0.1
+redmine_db_port: 5432
+redmine_db_allowed_cidrs:
+  - 127.0.0.1/32
+  - ::1/128
+
+redmine_puma_workers: 2
+redmine_puma_threads: 5
