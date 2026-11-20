@@ -7,5 +7,7 @@
     - role: redmine_common
     - role: redmine_database
     - role: redmine_ruby
+    - role: otel_collector
+      when: otel_enabled | bool
     - role: redmine
     - role: redmine_nginx

@@ -21,3 +21,14 @@ redmine_db_allowed_cidrs:
 
 redmine_puma_workers: 2
 redmine_puma_threads: 5
+
+otel_enabled: true
+otel_service_name: redmine
+otel_exporter_endpoint: "http://127.0.0.1:4318"
+otel_exporter_protocol: "http/protobuf"
+otel_traces_exporter: otlp
+otel_resource_attributes: "deployment.environment=demo,service.namespace=capacitacion"
+
+otel_grafana_endpoint: "{{ vault_otel_grafana_endpoint | default('') }}"
+otel_grafana_instance_id: "{{ vault_otel_grafana_instance_id | default('') }}"
+otel_grafana_api_key: "{{ vault_otel_grafana_api_key | default('') }}"

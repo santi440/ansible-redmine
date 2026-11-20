@@ -8,4 +8,6 @@
     - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine_database"
     - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine_ruby"
     - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine"
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/otel_collector"
+      when: otel_enabled | bool
     - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/redmine_nginx"

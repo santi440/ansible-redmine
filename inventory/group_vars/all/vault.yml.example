@@ -6,3 +6,8 @@
 # cifrarlo con:
 #   ansible-vault encrypt inventory/group_vars/all/vault.yml
 vault_redmine_db_password: "CAMBIAR-esta-password"
+
+
+vault_otel_grafana_endpoint: "https://otlp-gateway-prod-TU-REGION.grafana.net/otlp"
+vault_otel_grafana_instance_id: "000000"
+vault_otel_grafana_api_key: "glc_RELLENAR"

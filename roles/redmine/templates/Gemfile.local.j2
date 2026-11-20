@@ -1,1 +1,6 @@
 gem 'puma'
+{% if otel_enabled | bool %}
+gem 'opentelemetry-sdk'
+gem 'opentelemetry-exporter-otlp'
+gem 'opentelemetry-instrumentation-all'
+{% endif %}

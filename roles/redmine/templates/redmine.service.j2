@@ -14,6 +14,15 @@ Environment=RBENV_ROOT={{ redmine_rbenv_root }}
 Environment=PATH={{ redmine_rbenv_root }}/shims:{{ redmine_rbenv_root }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=REDMINE_WORKERS={{ redmine_puma_workers }}
 Environment=REDMINE_MAX_THREADS={{ redmine_puma_threads }}
+
+{% if otel_enabled | bool %}
+Environment=OTEL_SERVICE_NAME={{ otel_service_name }}
+Environment=OTEL_EXPORTER_OTLP_ENDPOINT={{ otel_exporter_endpoint }}
+Environment=OTEL_EXPORTER_OTLP_PROTOCOL={{ otel_exporter_protocol }}
+Environment=OTEL_TRACES_EXPORTER={{ otel_traces_exporter }}
+Environment=OTEL_RESOURCE_ATTRIBUTES={{ otel_resource_attributes }}
+{% endif %}
+
 ExecStart={{ redmine_rbenv_root }}/bin/rbenv exec bundle exec puma -C {{ redmine_root }}/config/puma.rb
 Restart=always
 RestartSec=5

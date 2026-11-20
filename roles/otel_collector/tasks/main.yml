@@ -1,0 +1,70 @@
+---
+- name: Crear los directorios del Collector
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ otel_collector_install_dir }}"
+    - "{{ otel_collector_config_dir }}"
+
+- name: Descargar otelcol-contrib
+  ansible.builtin.get_url:
+    url: "{{ otel_collector_download_url }}"
+    dest: "/tmp/otelcol-contrib-{{ otel_collector_version }}.tar.gz"
+    mode: "0644"
+
+- name: Extraer el binario del Collector
+  ansible.builtin.unarchive:
+    src: "/tmp/otelcol-contrib-{{ otel_collector_version }}.tar.gz"
+    dest: "{{ otel_collector_install_dir }}"
+    remote_src: true
+    creates: "{{ otel_collector_install_dir }}/otelcol-contrib"
+
+- name: Escribir la configuración del Collector
+  ansible.builtin.template:
+    src: collector-config.yaml.j2
+    dest: "{{ otel_collector_config_dir }}/collector-config.yaml"
+    owner: root
+    group: root
+    mode: "0640"
+  notify: Reiniciar otelcol-contrib
+
+- name: Escribir el archivo de secretos del Collector
+  ansible.builtin.template:
+    src: grafana.env.j2
+    dest: "{{ otel_collector_config_dir }}/grafana.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Reiniciar otelcol-contrib
+
+- name: Validar la configuración del Collector
+  ansible.builtin.command:
+    cmd: >-
+      {{ otel_collector_install_dir }}/otelcol-contrib validate
+      --config={{ otel_collector_config_dir }}/collector-config.yaml
+  environment:
+    GRAFANA_CLOUD_OTLP_ENDPOINT: "{{ otel_grafana_endpoint }}"
+    GRAFANA_CLOUD_INSTANCE_ID: "{{ otel_grafana_instance_id }}"
+    GRAFANA_CLOUD_API_KEY: "{{ otel_grafana_api_key }}"
+  changed_when: false
+
+- name: Escribir la unidad systemd del Collector
+  ansible.builtin.template:
+    src: otelcol-contrib.service.j2
+    dest: /etc/systemd/system/otelcol-contrib.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reiniciar otelcol-contrib
+
+- name: Asegurar que el Collector esté activo al arrancar
+  ansible.builtin.systemd_service:
+    name: otelcol-contrib
+    state: started
+    enabled: true
+    daemon_reload: true

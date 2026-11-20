@@ -26,6 +26,12 @@ Vagrant.configure("2") do |config|
     host: HOST_HTTP_PORT,
     host_ip: "127.0.0.1",
     id: "http"
+  
+  config.vm.network "forwarded_port",
+    guest: 8888,
+    host: 8888,
+    host_ip: "127.0.0.1",
+    id: "otel-metrics"
 
   config.vm.provider "virtualbox" do |vb|
     vb.name = VM_NAME

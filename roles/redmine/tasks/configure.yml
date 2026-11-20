@@ -29,6 +29,22 @@
   no_log: true
   notify: Reiniciar Redmine
 
+- name: Escribir el inicializador de OpenTelemetry
+  ansible.builtin.template:
+    src: opentelemetry.rb.j2
+    dest: "{{ redmine_root }}/config/initializers/opentelemetry.rb"
+    owner: "{{ redmine_user }}"
+    group: "{{ redmine_group }}"
+    mode: "0644"
+  notify: Reiniciar Redmine
+  when: otel_enabled | bool
+
+- name: Quitar el inicializador de OpenTelemetry cuando el feature está apagado
+  ansible.builtin.file:
+    path: "{{ redmine_root }}/config/initializers/opentelemetry.rb"
+    state: absent
+  when: not (otel_enabled | bool)
+
 - name: Declarar Puma en Gemfile.local
   ansible.builtin.template:
     src: Gemfile.local.j2

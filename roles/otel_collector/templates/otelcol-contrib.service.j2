@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenTelemetry Collector (contrib)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile={{ otel_collector_config_dir }}/grafana.env
+ExecStart={{ otel_collector_install_dir }}/otelcol-contrib --config={{ otel_collector_config_dir }}/collector-config.yaml
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

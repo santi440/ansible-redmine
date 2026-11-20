@@ -30,3 +30,10 @@ redmine_puma_threads: 5
 redmine_puma_socket: "{{ redmine_root }}/tmp/puma.sock"
 
 redmine_recompile_assets: false
+
+otel_enabled: false
+otel_service_name: redmine
+otel_exporter_endpoint: "http://127.0.0.1:4318"
+otel_exporter_protocol: "http/protobuf"
+otel_traces_exporter: console
+otel_resource_attributes: "deployment.environment=production,service.namespace=capacitacion"
