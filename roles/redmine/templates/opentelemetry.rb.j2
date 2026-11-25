@@ -3,5 +3,6 @@ require 'opentelemetry/exporter/otlp'
 require 'opentelemetry/instrumentation/all'
 
 OpenTelemetry::SDK.configure do |c|
+  c.service_name = '{{ otel_service_name }}'
   c.use_all
 end

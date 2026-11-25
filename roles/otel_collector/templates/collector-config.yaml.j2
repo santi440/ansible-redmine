@@ -19,6 +19,25 @@ processors:
   batch:
     timeout: 5s
     send_batch_size: 512
+  transform/add_traceid_label:
+    metric_statements:
+      - context: exemplar
+        statements:
+          - set(exemplar.filtered_attributes["traceID"], exemplar.trace_id.string)
+
+connectors:
+  spanmetrics:
+    namespace: traces.span.metrics
+    metrics_flush_interval: 15s
+    dimensions:
+      - name: http.response.status_code
+    exemplars:
+      enabled: true
+      max_per_data_point: 5
+    resource_metrics_key_attributes:
+      - service.name
+      - service.namespace
+      - deployment.environment
 
 extensions:
   basicauth/grafana_cloud:
@@ -31,6 +50,8 @@ exporters:
     endpoint: ${env:GRAFANA_CLOUD_OTLP_ENDPOINT}
     auth:
       authenticator: basicauth/grafana_cloud
+  prometheus/local:
+    endpoint: 0.0.0.0:8889
 
 service:
   extensions: [basicauth/grafana_cloud]
@@ -38,7 +59,11 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource/add_environment, batch]
-      exporters: [otlphttp/grafana_cloud]
+      exporters: [otlphttp/grafana_cloud, spanmetrics]
+    metrics:
+      receivers: [spanmetrics]
+      processors: [memory_limiter, transform/add_traceid_label, batch]
+      exporters: [otlphttp/grafana_cloud, prometheus/local]
   telemetry:
     metrics:
       level: detailed

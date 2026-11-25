@@ -1,5 +1,5 @@
 ---
-otel_collector_version: "0.138.0"
+otel_collector_version: "0.156.0"
 otel_collector_install_dir: /opt/otelcol
 otel_collector_config_dir: /etc/otelcol
 otel_collector_download_url: >-

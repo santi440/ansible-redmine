@@ -21,7 +21,14 @@
     src: "/tmp/otelcol-contrib-{{ otel_collector_version }}.tar.gz"
     dest: "{{ otel_collector_install_dir }}"
     remote_src: true
-    creates: "{{ otel_collector_install_dir }}/otelcol-contrib"
+    creates: "{{ otel_collector_install_dir }}/otelcol-contrib-{{ otel_collector_version }}"
+
+- name: Registrar la versión instalada del Collector
+  ansible.builtin.copy:
+    content: "{{ otel_collector_version }}\n"
+    dest: "{{ otel_collector_install_dir }}/otelcol-contrib-{{ otel_collector_version }}"
+    mode: "0644"
+    force: false
 
 - name: Escribir la configuración del Collector
   ansible.builtin.template:
